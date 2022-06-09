@@ -1,0 +1,30 @@
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: >-
+        Description: Udacity AWS Cloud Architect ND RDS DB Subnet Group - Primary
+    Parameters:
+        Owner:
+            Description: Enter the Name of the owner for this stack
+            Type: String
+            Default: Richard J. Rasor
+        DBSubnetGroupName:
+            Type: String
+            Default: Udacity DB Subnet Group for Primary VPC
+        VPC:
+            Description: Select VPC from the available VPCs in your account.
+            Type: AWS::EC2::VPC::Id
+        AvailabilityZone:
+            Description: Choose the Availability Zone for this DB Subnet Group
+            Type: 
+    Resources: 
+      myDBSubnetGroup: 
+        Properties: 
+          DBSubnetGroupDescription: Udacity_RSD_secondary
+          SubnetIds: 
+            - subnet-0111bb68178af31ca
+            
+          Tags: 
+            - 
+              Key: Name
+              Value: Udacity_Project_1_RDS_Primary
+        Type: "AWS::RDS::DBSubnetGroup"
+

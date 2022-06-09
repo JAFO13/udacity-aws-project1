@@ -1,0 +1,284 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Description: Udacity AWS Cloud Architect ND Primary VPC RDS - Project: Recoverability in AWS.
+Parameters:
+  Owner:
+      Description: Enter the Name of the owner for this Stack
+      Type: String
+      Default: Richard J. Rasor
+  VPC:
+      Description: Select VPC from the available VPCs in your account.
+      Type: AWS::EC2::VPC::Id
+  PrivateSubnet1:
+      Description:  Select Private Subnet 1
+      Type:  AWS::EC2::Subnet::Id
+  PrivateSubnet2:
+      Description: Select Private Subnet 2
+      Type:  AWS::EC2::Subnet::Id
+  RDSAccessSecurityGroup:
+      Description: Name of the Security Group
+      Type: AWS::EC2::SecurityGroup::Id
+  MasterUsername:
+      Description: Database administration name
+      Type: String
+      Default: rdsroot
+  MasterUserPassword:
+      NoEcho: 'true'
+      Description:  Database Administration password.
+      Type: String
+      MinLength: '8'
+      AllowedPattern: "[a-zA-Z0-9!?]*"
+      ConstraintDescription: Must only contain upper and lowercase letters and numbers.
+  DBName:
+      Description: Enter name of database
+      Type: String
+      Default: udacity
+  BackupRetentionPeriod:
+      Description: Enter Backup Retention Period in Days.
+      Type: Number
+      Default: '5'
+  MultiAvailabilityZone:
+      Description: Do you want to Enable Multi Availability Zones?
+      Type: String
+      Default: 'true'
+      AllowedValues:
+          - 'true'
+          - 'false'
+  TcpPort:
+      Description: Enter RDS Listening TCP Port number.
+      Type: Number
+      Default: '3306'
+  PreferredBackupWindow:
+      Description: Enter Preferred Backup Window Time.
+      Type: String
+      Default: 15:00-17:00
+  PreferredMaintenanceWindow:
+      Description: Enter Preferred Maintenance Window Time.
+      Type: String
+      Default: Sun:18:00-Sun:22:00
+  AllocatedStorage:
+      Default: '20'
+      Description: The size of the database (GiB)
+      Type: Number
+      MinValue: '20'
+      MaxValue: '65536'
+      ConstraintDescription: must be between 20 and 65536 GiB.
+  SnapshotOnDelete:
+      Description: Do you want to create a Snapshot on instance delete?
+      Type: String
+      Default: 'true'
+      AllowedValues:
+          - 'true'
+          - 'false'
+  AutoMinorVersionUpgrade:
+      Description: Do you want to allow automatic minor version upgrade?
+      Type: String
+      Default: 'false'
+      AllowedValues:
+          - 'true'
+          - 'false'
+  InstanceType:
+      Default: db.t4g.small
+      Description: DB instance class
+      Type: String
+      ConstraintDescription: Must select a valid DB instance type.
+Mappings:
+    Settings:
+        MySQL:
+          Engine: MySQL
+          Version: '8.0.25'
+Conditions:
+    ConfigureSnapshotOnDelete:
+        Fn::Equals:
+            - Ref: SnapshotOnDelete
+            - 'true'
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+            - Label:
+                default: Ownership
+              Parameters:
+                  - Owner
+            - Label:
+                default: Netork Configuration
+              Parameters:
+                  - VPC
+                  - PrivateSubnet1
+                  - PrivateSubnet2
+            - Label:
+                default: RDS Configuration
+              Parameters:
+                  - InstanceType
+                  - MasterUsername
+                  - MasterUserPassword
+                  - BackupRetionPeriod
+                  - PreferredBackupWindow
+                  - PreferredMaintenanceWindow
+                  - SnapshotOnDelete
+                  - AllocatedStorage
+                  - AutoMinorVersionUpgrade
+                  - TcpPort
+                  - MultiAvailabilityZone
+                  - DBName
+              PerameterLabels:
+                  Owner:
+                      default: Team or Individual Owner
+                  Instancetype:
+                      default: Instance Type
+                  PrivateSubnet1:
+                      default: Private Subnet 1
+                  PrivateSubnet2:
+                      default: Private Subnet 2
+                  MasterUsername:
+                      default: Master Username
+                  MasterUserPassword:
+                      default: Master User Password
+                  BackupRetentionPeriod:
+                      default: Backup Retention Period
+                  PreferredBackupWindow:
+                      default: Preferred Backup Window
+                  PreferredMaintenanceWindow:
+                      default: Preferred Maintenance Window
+                  AllocatedStorage:
+                      default: Allocated Storage
+                  AutoMinorVersionUpgrade:
+                      default: Auto Minor Version Upgrade
+                  TcpPort:
+                      default: TCP Port
+                  MultiAvaiolabilityZone:
+                      default: Multi Availability Zone?
+                  SnapshotOnDelete:
+                      default: Snapshot On Delete?
+                  DBName:
+                      default: myRDSdb
+
+Resources:
+    DbSubnetGroup:
+        Type: AWS::RDS::DBSubnetGroup
+        Properties:
+            DBSubnetGroupDescription:
+                Fn::Join:
+                    - ""
+                    - - 'RDS Subnet Group for '
+                      - Ref: AWS::StackName
+            SubnetIds:
+            - Ref: PrivateSubnet1
+            - Ref: PrivateSubnet2
+            Tags:
+            - Key: Name
+              Value:
+                  Ref: AWS::StackName
+            - Key: Owner
+              Value:
+                  Ref: Owner
+    DbInstance:
+        Type: AWS::RDS::DBInstance
+        DeletionPolicy: Snapshot
+        DependsOn:
+        - DbSubnetGroup
+        Properties:
+            AllocatedStorage:
+                Ref: AllocatedStorage
+            AllowMajorVersionUpgrade: 'false'
+            AutoMinorVersionUpgrade:
+                Ref: AutoMinorVersionUpgrade
+            BackupRetentionPeriod:
+                Ref: BackupRetentionPeriod
+            DBInstanceClass:
+                Ref: InstanceType
+            DBInstanceIdentifier:
+                Ref: AWS::StackName
+            DBName:
+                Ref: DBName
+            DBSubnetGroupName:
+                Ref: DbSubnetGroup
+            Engine:
+                Fn::FindInMap:
+                - Settings
+                - MySQL
+                - Engine
+            EngineVersion:
+                Fn::FindInMap:
+                - Settings
+                - MySQL
+                - Version
+            MasterUsername:
+                Ref: MasterUsername
+            MasterUserPassword:
+                Ref: MasterUserPassword
+            MultiAZ:
+                Ref: MultiAvailabilityZone
+            Port:
+                Ref: TcpPort
+            PreferredBackupWindow:
+                Ref: PreferredBackupWindow
+            PreferredMaintenanceWindow:
+                Ref: PreferredMaintenanceWindow
+            PubliclyAccessible: 'false'
+            StorageEncrypted: 'false'
+            StorageType: gp2
+            VPCSecurityGroups:
+            - Ref: RDSAccessSecurityGroup
+            Tags:
+            - Key: Name
+              Value:
+                 Ref: AWS::StackName
+            - Key: Owner
+              Value:
+                 Ref: Owner
+                 
+Outputs:                 
+    Owner:
+        Description: Team or Individual that owns this formation
+        Value:
+            Ref: Owner
+    VPC:
+        Description: VPC Used
+        Value:
+            Ref: VPC
+    RDSHostname:
+        Description: RDS Hostname
+        Value:
+            Fn::GetAtt:
+            - DbInstance
+            - Endpoint.Port
+    DbSubnetGroup:
+        Description: DB Subnet Group Created.
+        Value:
+            Ref: DbSubnetGroup
+    RDSAccessSecurityGroup:
+        Description: RDS Access Security Group Used
+        Value:
+            Ref: RDSAccessSecurityGroup
+    PrivateSubnet1:
+        Description: Private Subnet 1 Deployment
+        Value:
+            Ref: PrivateSubnet1
+    PrivateSubnet2:
+        Description: Private Subnet 2 Deployment
+        Value:
+            Ref: PrivateSubnet2
+    BackupRetentionPeriod:
+        Description: Backup Retention Period in Days
+        Value:
+            Ref: BackupRetentionPeriod
+    MultiAvailabilityZone:
+        Description: Enable Multi Availability Zone?
+        Value:
+            Ref: MultiAvailabilityZone
+    SnapshotOnDelete:
+        Description: Enable Snapshot on Delete?
+        Value:
+            Ref: SnapshotOnDelete
+    PreferredBackupWindow:
+        Description: Preferred Backup Window
+        Value:
+            Ref: PreferredBackupWindow
+    PreferredMaintenanceWindow:
+        Description: Preferred Maintenance Window
+        Value:
+            Ref: PreferredMaintenanceWindow
+    AllocatedStorage:
+        Description: Allocated Storage in GB
+        Value:
+            Ref: AllocatedStorage

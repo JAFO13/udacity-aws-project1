@@ -1,0 +1,14 @@
+    AWSTemplateFormatVersion: "2010-09-09"
+    Resources: 
+      myDBSubnetGroup: 
+        Properties: 
+          DBSubnetGroupDescription: Udacity_RSD_secondary
+          SubnetIds: 
+            - subnet-0111bb68178af31ca
+            - subnet-0add424b10312a4bd
+          Tags: 
+            - 
+              Key: Name
+              Value: Udacity_Project_1_RDS_Secondary
+        Type: "AWS::RDS::DBSubnetGroup"
+
